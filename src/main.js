@@ -8,7 +8,6 @@ Alpine.data('minicart', () => ({
   cart: null,
   isLoading: false,
   error: null,
-  // Set to store IDs of items currently updating (Race condition protection)
   updatingItems: new Set(),
 
   init() {
@@ -20,49 +19,62 @@ Alpine.data('minicart', () => ({
     this.error = null;
     try {
       const res = await fetch('/api/cart');
-      if (!res.ok) throw new Error("Network error");
+
+      // --- DETAILED ERROR HANDLING (UX requirement) ---
+      if (!res.ok) {
+        // 5xx Server Errors
+        if (res.status >= 500) {
+          throw new Error("Szerverhiba történt. Kérjük próbálja később! (500)");
+        }
+        // 4xx Client Errors (e.g. 404 Not Found)
+        if (res.status === 404) {
+          throw new Error("A kosár nem található. (404)");
+        }
+        // Other 4xx
+        throw new Error(`Hiba történt a betöltéskor. (${res.status})`);
+      }
+
       this.cart = await res.json();
+
     } catch (e) {
       console.error(e);
-      this.error = "Failed to load cart data.";
+      // Network Error detection
+      if (e.name === 'TypeError' || e.message.includes('Failed to fetch')) {
+        this.error = "Nincs internetkapcsolat. Kérjük ellenőrizze a hálózatot!";
+      } else {
+        // Show the specific error message thrown above
+        this.error = e.message;
+      }
     } finally {
       this.isLoading = false;
     }
   },
 
-  // Update Quantity (With Validation)
   async updateQty(item, direction) {
-    // 1. Race condition protection: If currently saving, ignore clicks
     if (this.isItemUpdating(item.object_id)) return;
 
-    // 2. Handle pack quantity steps
     const packStep = parseInt(item.pack_quantity) || 1;
     const currentQty = parseInt(item.qty);
     const newQty = currentQty + (direction * packStep);
 
-    // 3. Min/Max validation
     const min = parseInt(item.min_qty) || 1;
     const max = parseInt(item.max_qty) || 999;
 
     if (newQty < min || newQty > max) return;
 
-    // 4. Sync with server
     await this.syncItem(item.object_id, newQty);
   },
 
-  // Remove function
   async removeItem(item) {
     if (this.isItemUpdating(item.object_id)) return;
-    if (!confirm(`Are you sure you want to remove "${item.name}"?`)) return;
+    if (!confirm(`Biztosan törölni szeretnéd a(z) "${item.name}" terméket?`)) return;
 
-    await this.syncItem(item.object_id, 0); // 0 qty = delete
+    await this.syncItem(item.object_id, 0);
   },
 
-  // Shared API call (PATCH)
   async syncItem(objectId, newQty) {
-    // Set loading state for specific item
     this.updatingItems.add(objectId);
-    this.updatingItems = new Set(this.updatingItems); // Reactivity trigger
+    this.updatingItems = new Set(this.updatingItems);
 
     try {
       const res = await fetch('/api/cart/item', {
@@ -71,25 +83,34 @@ Alpine.data('minicart', () => ({
         body: JSON.stringify({ object_id: objectId, qty: newQty })
       });
 
-      if (!res.ok) throw new Error("Update failed");
+      // --- DETAILED ERROR HANDLING FOR ACTIONS ---
+      if (!res.ok) {
+        if (res.status >= 500) throw new Error("Szerver hiba a mentésnél!");
+        if (res.status === 404) throw new Error("A termék már nem elérhető!");
+        if (res.status === 400) throw new Error("Érvénytelen mennyiség!");
+        throw new Error("Hiba a mentés során.");
+      }
 
-      // Server returns full fresh cart (with recalculated prices)
       this.cart = await res.json();
+
     } catch (e) {
-      alert('Error saving changes. Please try again.');
+      // UX: For actions (like click), alert is often better or toast
+      let msg = e.message;
+      if (e.name === 'TypeError') {
+        msg = "Hálózati hiba! Nem sikerült menteni a módosítást.";
+      }
+
+      alert(msg);
     } finally {
-      // Remove loading state
       this.updatingItems.delete(objectId);
       this.updatingItems = new Set(this.updatingItems);
     }
   },
 
-  // Helper: Is this item loading?
   isItemUpdating(id) {
     return this.updatingItems.has(id);
   },
 
-  // Helper: Money formatting (HUF + Thousand separator)
   formatMoney(amount) {
     if (!this.cart || amount === undefined || amount === null) return '...';
 
