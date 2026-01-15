@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minicart Vite</title>
+</head>
+<body class="bg-gray-100 font-sans antialiased p-4">
+
+<div id="app">
+    <div x-data="minicart" class="max-w-lg mx-auto bg-white shadow-xl rounded-lg overflow-hidden min-h-[400px] flex flex-col relative">
+        <div class="bg-gray-800 text-white p-4 flex justify-between items-center z-10">
+            <h2 class="text-xl font-bold">Kosár (Vite + Express)</h2>
+            <span class="text-sm bg-gray-700 px-2 py-1 rounded" x-show="cart" x-text="`${cart?.grandtotal?.product_qty || 0} tétel`"></span>
+        </div>
+
+        <div x-show="isLoading" class="absolute inset-0 bg-white z-20 flex flex-col items-center justify-center">
+            <span class="text-gray-500">Betöltés...</span>
+        </div>
+
+        <div class="p-4" x-show="cart">
+            <pre x-text="JSON.stringify(cart, null, 2)" class="text-xs"></pre>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
