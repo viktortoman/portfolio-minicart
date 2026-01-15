@@ -1,6 +1,7 @@
 {
   "name": "minicart-vite-express",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "dev": "concurrently \"node server.js\" \"vite\"",
     "build": "vite build"
