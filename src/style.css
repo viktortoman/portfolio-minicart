@@ -2,16 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom spinner animation */
 .spinner {
-    border: 3px solid rgba(0, 0, 0, 0.1);
-    width: 24px;
-    height: 24px;
+    border: 3px solid rgba(0, 0, 0, 0.05);
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    border-left-color: #4F46E5;
-    animation: spin 1s linear infinite;
+    border-left-color: #4F46E5; /* Indigo-600 */
+    animation: spin 0.8s linear infinite;
 }
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-[x-cloak] { display: none !important; }
+
+/* Hide elements until Alpine loads (prevent flicker) */
+[x-cloak] {
+    display: none !important;
+}
+
+/* Custom scrollbar for better list appearance */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #c7c7c7;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #a0a0a0;
+}
